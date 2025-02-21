@@ -43,15 +43,15 @@ async def root():
 @app.post('/token', response_model=Token)
 async def login(form_data:Annotated[OAuth2PasswordRequestForm, Depends()],
                 session:Annotated[Session, Depends(get_session)]):
-    user = authenticate_user (form_data.username, form_data.password, session)
+    user = authenticate_user(form_data.username, form_data.password, session)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
     expire_time = timedelta(minutes=EXPIRY_TIME)
-    access_token = create_access_token({"sub":form_data.username}, expire_time)
+    access_token = create_access_token({"sub": user.id, "username": form_data.username, "email": user.email}, expire_time)
 
     refresh_expire_time = timedelta(days=7)
-    refresh_token = create_refresh_token({"sub":user.email}, refresh_expire_time)
+    refresh_token = create_refresh_token({"username":user.email}, refresh_expire_time)
 
     return Token(access_token=access_token, token_type="bearer", refresh_token=refresh_token)
 
@@ -69,10 +69,10 @@ def refresh_token(old_refresh_token:str, session:Annotated[Session, Depends(get_
         raise credential_exception
     
     expire_time = timedelta(minutes=EXPIRY_TIME)
-    access_token = create_access_token({"sub":user.username}, expire_time)
+    access_token = create_access_token({"username":user.username}, expire_time)
 
     refresh_expire_time = timedelta(days=7)
-    refresh_token = create_refresh_token({"sub":user.email}, refresh_expire_time)
+    refresh_token = create_refresh_token({"username":user.email}, refresh_expire_time)
 
     return Token(access_token=access_token, token_type= "bearer", refresh_token=refresh_token)
 

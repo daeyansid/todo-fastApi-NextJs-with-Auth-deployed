@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 setUser({
-                    id: payload.sub,
+                    sub: payload.sub,
                     username: payload.username,
                     email: payload.email
                 });
