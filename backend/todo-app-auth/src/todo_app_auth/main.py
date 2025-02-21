@@ -9,6 +9,7 @@ from src.todo_app_auth.auth import EXPIRY_TIME, authenticate_user, create_access
 from src.todo_app_auth.db import get_session, create_tables
 from src.todo_app_auth.models import Todo, Todo_Create, Todo_Edit, Token, User
 from src.todo_app_auth.router import user
+from fastapi.middleware.cors import CORSMiddleware
 
 
 @asynccontextmanager
@@ -21,6 +22,15 @@ async def lifespan(app: FastAPI):
 
 app: FastAPI = FastAPI(
     lifespan=lifespan, title="dailyDo Todo App", version='1.0.0')
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React app origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(router=user.user_router)
 

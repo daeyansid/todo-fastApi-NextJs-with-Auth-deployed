@@ -23,7 +23,7 @@ async def regiser_user (new_user:Annotated[Register_User, Depends()],
     
     db_user = get_user_from_db(session, new_user.username, new_user.email)
     if db_user:
-        raise HTTPException(status_code=409, detail="User with these credentials already exists")
+        raise HTTPException(status_code=400, detail="User with these credentials already exists")
     user = User(username = new_user.username,
                 email = new_user.email,
                 password = hash_password(new_user.password))
