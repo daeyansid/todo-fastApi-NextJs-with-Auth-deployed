@@ -19,6 +19,7 @@ export default function TodosPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedTodo, setSelectedTodo] = useState<TodoResponse | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [deletingIds, setDeletingIds] = useState<number[]>([]);
 
     useEffect(() => {
@@ -26,17 +27,27 @@ export default function TodosPage() {
             router.push("/");
             return;
         }
-        loadTodos();
-    }, [isAuthenticated, router]);
+
+        // Only load todos on initial mount or when auth state changes
+        if (isInitialLoad && isAuthenticated) {
+            loadTodos();
+            setIsInitialLoad(false);
+        }
+    }, [isAuthenticated, router, isInitialLoad]); // Add isInitialLoad to dependencies
 
     const loadTodos = async () => {
+        if (isLoading) return; // Prevent multiple simultaneous loads
+        
+        setIsLoading(true);
         const loading = showLoadingAlert('Loading your todos...');
         try {
             const data = await fetchTodos();
             setTodos(data);
-            closeLoadingAlert();
         } catch (error) {
             showErrorAlert('Error', 'Failed to load todos');
+        } finally {
+            closeLoadingAlert();
+            setIsLoading(false);
         }
     };
 
