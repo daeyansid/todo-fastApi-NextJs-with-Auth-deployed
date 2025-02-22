@@ -9,11 +9,12 @@ import { TodoInput } from "@/components/ui/todo-input";
 import { UpdateTodoModal } from "@/components/ui/update-todo-modal";
 import { createTodo, updateTodo, deleteTodo, fetchTodos, TodoResponse } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
+import { showSuccessAlert, showErrorAlert, showLoadingAlert, closeLoadingAlert } from '@/utils/alerts';
+import Swal from 'sweetalert2';
 
 export default function TodosPage() {
     const { isAuthenticated, user, logout } = useAuth();
     const router = useRouter();
-    const { toast } = useToast();
     const [todos, setTodos] = useState<TodoResponse[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
     const [selectedTodo, setSelectedTodo] = useState<TodoResponse | null>(null);
@@ -29,34 +30,27 @@ export default function TodosPage() {
     }, [isAuthenticated, router]);
 
     const loadTodos = async () => {
+        const loading = showLoadingAlert('Loading your todos...');
         try {
             const data = await fetchTodos();
             setTodos(data);
+            closeLoadingAlert();
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to load todos",
-                variant: "destructive",
-            });
+            showErrorAlert('Error', 'Failed to load todos');
         }
     };
 
     const handleAddTodo = async (content: string) => {
         setIsLoading(true);
+        const loading = showLoadingAlert('Adding todo...');
         try {
             const newTodo = await createTodo({ content });
             setTodos(prev => [newTodo, ...prev]);
             setShowAddModal(false);
-            toast({
-                title: "Success",
-                description: "Todo added successfully",
-            });
+            closeLoadingAlert();
+            showSuccessAlert('Success', 'Todo added successfully');
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to add todo",
-                variant: "destructive",
-            });
+            showErrorAlert('Error', 'Failed to add todo');
         } finally {
             setIsLoading(false);
         }
@@ -64,20 +58,15 @@ export default function TodosPage() {
 
     const handleUpdateTodo = async (id: number, content: string) => {
         setIsLoading(true);
+        const loading = showLoadingAlert('Updating todo...');
         try {
             const updatedTodo = await updateTodo(id, { content, is_completed: false });
             setTodos(prev => prev.map(todo => todo.id === id ? updatedTodo : todo));
             setSelectedTodo(null);
-            toast({
-                title: "Success",
-                description: "Todo updated successfully",
-            });
+            closeLoadingAlert();
+            showSuccessAlert('Success', 'Todo updated successfully');
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to update todo",
-                variant: "destructive",
-            });
+            showErrorAlert('Error', 'Failed to update todo');
         } finally {
             setIsLoading(false);
         }
@@ -87,38 +76,44 @@ export default function TodosPage() {
         const todo = todos.find(t => t.id === id);
         if (!todo) return;
 
+        const loading = showLoadingAlert('Updating status...');
         try {
             const updatedTodo = await updateTodo(id, {
                 content: todo.content,
                 is_completed: !todo.is_completed
             });
             setTodos(prev => prev.map(t => t.id === id ? updatedTodo : t));
+            closeLoadingAlert();
+            showSuccessAlert('Success', `Todo marked as ${updatedTodo.is_completed ? 'completed' : 'incomplete'}`);
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to toggle todo status",
-                variant: "destructive",
-            });
+            showErrorAlert('Error', 'Failed to update todo status');
         }
     };
 
     const handleDeleteTodo = async (id: number) => {
-        setDeletingIds(prev => [...prev, id]);
-        try {
-            await deleteTodo(id);
-            setTodos(prev => prev.filter(todo => todo.id !== id));
-            toast({
-                title: "Success",
-                description: "Todo deleted successfully",
-            });
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to delete todo",
-                variant: "destructive",
-            });
-        } finally {
-            setDeletingIds(prev => prev.filter(todoId => todoId !== id));
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        });
+
+        if (result.isConfirmed) {
+            setDeletingIds(prev => [...prev, id]);
+            const loading = showLoadingAlert('Deleting todo...');
+            try {
+                await deleteTodo(id);
+                setTodos(prev => prev.filter(todo => todo.id !== id));
+                closeLoadingAlert();
+                showSuccessAlert('Deleted!', 'Your todo has been deleted.');
+            } catch (error) {
+                showErrorAlert('Error', 'Failed to delete todo');
+            } finally {
+                setDeletingIds(prev => prev.filter(todoId => todoId !== id));
+            }
         }
     };
 
