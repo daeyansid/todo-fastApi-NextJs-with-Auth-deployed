@@ -20,7 +20,7 @@ export default function LoginPage() {
         try {
             const response = await login({ username, password });
             authLogin(response);
-        } catch (err) {
+        } catch (_err) {
             setError("Login failed. Please check your credentials.");
         } finally {
             setIsLoading(false);

@@ -10,7 +10,7 @@ export interface AuthResponse {
 }
 
 export interface User {
-    sub: number | String;
+    sub: number | string;
     username: string;
     email: string;
 }

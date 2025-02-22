@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { TodoList } from "@/components/ui/todo-list";
 import { TodoInput } from "@/components/ui/todo-input";
 import { UpdateTodoModal } from "@/components/ui/update-todo-modal";
 import { createTodo, updateTodo, deleteTodo, fetchTodos, TodoResponse } from "@/lib/api";
-import { useToast } from "@/components/ui/use-toast";
 import { showSuccessAlert, showErrorAlert, showLoadingAlert, closeLoadingAlert } from '@/utils/alerts';
 import Swal from 'sweetalert2';
 
@@ -22,86 +21,102 @@ export default function TodosPage() {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [deletingIds, setDeletingIds] = useState<number[]>([]);
 
+    const loadTodos = useCallback(async (): Promise<void> => {
+        if (isLoading) return;
+        
+        setIsLoading(true);
+        try {
+            showLoadingAlert('Loading your todos...');
+            const data = await fetchTodos();
+            setTodos(data);
+        } catch (error) {
+            if (error instanceof Error) {
+                showErrorAlert('Error', error.message);
+            } else {
+                showErrorAlert('Error', 'Failed to load todos');
+            }
+        } finally {
+            closeLoadingAlert();
+            setIsLoading(false);
+        }
+    }, [isLoading]);
+
     useEffect(() => {
         if (!isAuthenticated) {
             router.push("/");
             return;
         }
 
-        // Only load todos on initial mount or when auth state changes
         if (isInitialLoad && isAuthenticated) {
             loadTodos();
             setIsInitialLoad(false);
         }
-    }, [isAuthenticated, router, isInitialLoad]); // Add isInitialLoad to dependencies
+    }, [isAuthenticated, router, isInitialLoad, loadTodos]);
 
-    const loadTodos = async () => {
-        if (isLoading) return; // Prevent multiple simultaneous loads
-        
+    const handleAddTodo = async (content: string): Promise<void> => {
         setIsLoading(true);
-        const loading = showLoadingAlert('Loading your todos...');
         try {
-            const data = await fetchTodos();
-            setTodos(data);
-        } catch (error) {
-            showErrorAlert('Error', 'Failed to load todos');
-        } finally {
-            closeLoadingAlert();
-            setIsLoading(false);
-        }
-    };
-
-    const handleAddTodo = async (content: string) => {
-        setIsLoading(true);
-        const loading = showLoadingAlert('Adding todo...');
-        try {
+            showLoadingAlert('Adding todo...');
             const newTodo = await createTodo({ content });
             setTodos(prev => [newTodo, ...prev]);
             setShowAddModal(false);
-            closeLoadingAlert();
             showSuccessAlert('Success', 'Todo added successfully');
         } catch (error) {
-            showErrorAlert('Error', 'Failed to add todo');
+            if (error instanceof Error) {
+                showErrorAlert('Error', error.message);
+            } else {
+                showErrorAlert('Error', 'Failed to add todo');
+            }
         } finally {
+            closeLoadingAlert();
             setIsLoading(false);
         }
     };
 
-    const handleUpdateTodo = async (id: number, content: string) => {
+    const handleUpdateTodo = async (id: number, content: string): Promise<void> => {
         setIsLoading(true);
-        const loading = showLoadingAlert('Updating todo...');
         try {
+            showLoadingAlert('Updating todo...');
             const updatedTodo = await updateTodo(id, { content, is_completed: false });
             setTodos(prev => prev.map(todo => todo.id === id ? updatedTodo : todo));
             setSelectedTodo(null);
-            closeLoadingAlert();
             showSuccessAlert('Success', 'Todo updated successfully');
         } catch (error) {
-            showErrorAlert('Error', 'Failed to update todo');
+            if (error instanceof Error) {
+                showErrorAlert('Error', error.message);
+            } else {
+                showErrorAlert('Error', 'Failed to update todo');
+            }
         } finally {
+            closeLoadingAlert();
             setIsLoading(false);
         }
     };
 
-    const handleToggleTodo = async (id: number) => {
+    const handleToggleTodo = async (id: number): Promise<void> => {
         const todo = todos.find(t => t.id === id);
         if (!todo) return;
 
-        const loading = showLoadingAlert('Updating status...');
         try {
+            showLoadingAlert('Updating status...');
             const updatedTodo = await updateTodo(id, {
                 content: todo.content,
                 is_completed: !todo.is_completed
             });
             setTodos(prev => prev.map(t => t.id === id ? updatedTodo : t));
-            closeLoadingAlert();
             showSuccessAlert('Success', `Todo marked as ${updatedTodo.is_completed ? 'completed' : 'incomplete'}`);
         } catch (error) {
-            showErrorAlert('Error', 'Failed to update todo status');
+            if (error instanceof Error) {
+                showErrorAlert('Error', error.message);
+            } else {
+                showErrorAlert('Error', 'Failed to update todo status');
+            }
+        } finally {
+            closeLoadingAlert();
         }
     };
 
-    const handleDeleteTodo = async (id: number) => {
+    const handleDeleteTodo = async (id: number): Promise<void> => {
         const result = await Swal.fire({
             title: 'Are you sure?',
             text: "You won't be able to revert this!",
@@ -114,15 +129,19 @@ export default function TodosPage() {
 
         if (result.isConfirmed) {
             setDeletingIds(prev => [...prev, id]);
-            const loading = showLoadingAlert('Deleting todo...');
             try {
+                showLoadingAlert('Deleting todo...');
                 await deleteTodo(id);
                 setTodos(prev => prev.filter(todo => todo.id !== id));
-                closeLoadingAlert();
                 showSuccessAlert('Deleted!', 'Your todo has been deleted.');
             } catch (error) {
-                showErrorAlert('Error', 'Failed to delete todo');
+                if (error instanceof Error) {
+                    showErrorAlert('Error', error.message);
+                } else {
+                    showErrorAlert('Error', 'Failed to delete todo');
+                }
             } finally {
+                closeLoadingAlert();
                 setDeletingIds(prev => prev.filter(todoId => todoId !== id));
             }
         }
