@@ -30,6 +30,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 app.include_router(router=user.user_router)
@@ -91,8 +92,7 @@ async def create_todo(current_user:Annotated[User, Depends(current_user)], todo:
 
 @app.get('/todos/', response_model=list[Todo])
 async def get_all(current_user:Annotated[User, Depends(current_user)],session: Annotated[Session, Depends(get_session)]):
-    
-    
+
     todos = session.exec(select(Todo).where(Todo.user_id == current_user.id)).all()
 
     if todos:

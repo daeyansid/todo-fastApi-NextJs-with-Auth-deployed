@@ -1,62 +1,44 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { Button } from "./button";
 
-interface TodoInputProps {
-    onAdd: (title: string, description: string, content: string) => void;
-    isLoading?: boolean;
+export interface TodoInputProps {
+    onAdd: (content: string) => Promise<void>;
+    isLoading: boolean;
+    onClose: () => void;
 }
 
-export function TodoInput({ onAdd, isLoading = false }: TodoInputProps) {
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [content, setContent] = useState('');
+export function TodoInput({ onAdd, isLoading, onClose }: TodoInputProps) {
+    const [content, setContent] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (title.trim()) {
-            onAdd(title, description, content);
-            setTitle('');
-            setDescription('');
-            setContent('');
-        }
+        if (!content.trim()) return;
+        await onAdd(content);
+        setContent("");
     };
 
     return (
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter todo title"
-                    className="w-full p-2 border rounded"
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700">
+                    Task
+                </label>
+                <textarea
+                    id="content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
                     required
                 />
             </div>
-            <div>
-                <input
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Enter description"
-                    className="w-full p-2 border rounded"
-                />
+            <div className="flex justify-end space-x-2">
+                <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Adding..." : "Add Todo"}
+                </Button>
             </div>
-            <div>
-                <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Enter content"
-                    className="w-full p-2 border rounded"
-                    rows={3}
-                />
-            </div>
-            <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full p-2 text-white bg-blue-500 rounded hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed"
-            >
-                {isLoading ? 'Adding...' : 'Add Todo'}
-            </button>
         </form>
     );
 }
